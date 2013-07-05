@@ -26,6 +26,9 @@ var program = require('commander');
 var cheerio = require('cheerio');
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
+var URL_DEFAULT = "http://floating-taiga-5411.herokuapp.com";
+var rest = require('restler');
+var request = require('request');
 
 var assertFileExists = function(infile) {
     var instr = infile.toString();
@@ -49,6 +52,7 @@ var checkHtmlFile = function(htmlfile, checksfile) {
     var checks = loadChecks(checksfile).sort();
     var out = {};
     for(var ii in checks) {
+        //console.log($(checks[ii]));
         var present = $(checks[ii]).length > 0;
         out[checks[ii]] = present;
     }
@@ -57,12 +61,26 @@ var checkHtmlFile = function(htmlfile, checksfile) {
 
 if(require.main == module) {
     program
-        .option('-c, --checks ', 'Path to checks.json', assertFileExists, CHECKSFILE_DEFAULT)
-        .option('-f, --file ', 'Path to index.html', assertFileExists, HTMLFILE_DEFAULT)
+        .option('-c, --checks <file>', 'Path to checks.json', assertFileExists, String, CHECKSFILE_DEFAULT)
+        .option('-f, --file <file>', 'Path to index.html', assertFileExists, String, HTMLFILE_DEFAULT)
+        .option('-u, --url <url>', 'destination URL') //, String, URL_DEFAULT)
         .parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
+    if (program.url) {
+        stream = fs.createWriteStream('tmp.html');
+        request.get(program.url).pipe(stream);
+        stream.once('close', function(){
+            var checkJson = checkHtmlFile('tmp.html', program.checks);
+            var outJson = JSON.stringify(checkJson, null, 4);
+            console.log(outJson);
+        });
+    }
+    else {
+        checkJson = checkHtmlFile(program.file, program.checks);
     var outJson = JSON.stringify(checkJson, null, 4);
     console.log(outJson);
+    }
+//    var outJson = JSON.stringify(checkJson, null, 4);
+//    console.log(outJson);
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
